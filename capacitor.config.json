@@ -1,0 +1,12 @@
+{
+  "appId": "com.celya.player",
+  "appName": "CELYA Player",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "orientation": "landscape"
+  }
+}
