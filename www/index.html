@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CELYA PLAYER</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <!-- HLS Player -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+    <style>
+        :root {
+            --bg-dark: #07090e;
+            --card-bg: #131722;
+            --accent-gold: #d4af37;
+            --text-main: #ffffff;
+            --text-dim: #8b949e;
+            --line-color: rgba(255, 255, 255, 0.12);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; user-select: none; }
+        body { background-color: var(--bg-dark); color: var(--text-main); width: 100vw; height: 100vh; overflow: hidden; }
+
+        .screen-view { display: flex; width: 100vw; height: 100vh; }
+        
+        .main-content {
+            flex: 0 0 75%;
+            padding: 25px 35px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100vh;
+        }
+
+        .header-logo {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--accent-gold);
+        }
+        .header-logo span { color: var(--text-dim); font-size: 14px; font-weight: normal; }
+
+        .playlists-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-content: flex-start;
+            flex: 1;
+            margin-top: 20px;
+            overflow-y: auto;
+        }
+
+        .playlist-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 14px 18px;
+            width: 200px;
+            height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            cursor: pointer;
+            transition: 0.2s all;
+        }
+        .playlist-card:hover { border-color: var(--accent-gold); transform: scale(1.02); }
+        .card-title { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-badge { background: #238636; color: #fff; font-size: 10px; padding: 3px 8px; border-radius: 10px; width: fit-content; }
+
+        .side-info {
+            flex: 0 0 25%;
+            border-left: 1px solid var(--line-color);
+            background: #0b0f17;
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            height: 100vh;
+        }
+
+        .act-status { font-size: 14px; font-weight: 600; margin-bottom: 20px; color: var(--accent-gold); }
+        .info-tag { font-size: 11px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 2px; }
+        .info-val { font-size: 15px; color: var(--accent-gold); font-family: monospace; font-weight: bold; margin-bottom: 15px; letter-spacing: 1px; word-break: break-all; }
+
+        #expired-screen {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(7, 9, 14, 0.96);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .expired-box {
+            background: var(--card-bg);
+            border: 2px solid var(--accent-gold);
+            border-radius: 14px;
+            padding: 25px 30px;
+            max-width: 580px;
+            width: 100%;
+            text-align: center;
+        }
+        .expired-box h2 { color: var(--accent-gold); margin-bottom: 8px; font-size: 20px; }
+        .expired-box p { font-size: 13px; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px; }
+        .price-box { display: flex; justify-content: center; gap: 15px; margin: 12px 0; }
+        .price-card { background: #1a202c; border: 1px solid var(--line-color); padding: 10px 15px; border-radius: 8px; flex: 1; font-size: 13px; }
+        .price-card span { display: block; color: var(--accent-gold); font-size: 16px; font-weight: bold; margin-top: 4px; }
+        .contact-info { background: #07090e; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-top: 12px; text-align: right; border-right: 3px solid var(--accent-gold); }
+
+        .hub-screen { display: none; width: 100vw; height: 100vh; padding: 30px 50px; flex-direction: column; justify-content: center; }
+        .hub-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; margin-top: 25px; }
+        .hub-item { background: var(--card-bg); border: 1px solid var(--line-color); border-radius: 14px; height: 210px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s all; }
+        .hub-item:hover { border-color: var(--accent-gold); transform: translateY(-4px); }
+
+        .player-screen { display: none; width: 100vw; height: 100vh; }
+        .channels-sidebar { width: 320px; background: #0c0f17; border-right: 1px solid var(--line-color); display: flex; flex-direction: column; height: 100vh; }
+        .channel-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .channel-item { padding: 10px 12px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; background: #161b26; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .channel-item:hover, .channel-item.active { background: var(--accent-gold); color: #000; font-weight: bold; }
+        .video-container { flex: 1; background: #000; position: relative; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        video { width: 100%; height: 100%; object-fit: contain; }
+    </style>
+</head>
+<body>
+
+    <!-- شاشة انتهاء الاشتراك -->
+    <div id="expired-screen">
+        <div class="expired-box">
+            <h2>انتهت فترة التجربة المجانية</h2>
+            <p>يرجى تفعيل اشتراكك لتستمر في الاستمتاع بخدمات CELYA Player بكامل المزايا.</p>
+            
+            <div class="price-box">
+                <div class="price-card">
+                    اشتراك سنة <span>10 يورو</span>
+                </div>
+                <div class="price-card">
+                    مدى الحياة <span>20 يورو</span>
+                </div>
+            </div>
+
+            <div class="contact-info">
+                <div>💳 <strong>PayPal:</strong> Adelromany582@gmail.com</div>
+                <div style="margin-top: 4px;">📞 <strong>للتفعيل والتحويل البنكي أو الاستفسار:</strong> +201044658675</div>
+                <div style="margin-top: 4px; color: #3fb950;">بعد التحويل، يرجى مراسلتنا عبر الواتساب مع إرسال صورة التحويل ومعرف الجهاز (MAC Address).</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. الشاشة الرئيسية -->
+    <div id="welcome-view" class="screen-view">
+        <div class="main-content">
+            <div class="header-logo">
+                <strong>CELYA PLAYER</strong> <span>| Playlists</span>
+            </div>
+            <div class="playlists-grid" id="tv-playlists-box"></div>
+            <div style="font-size: 11px; color: var(--text-dim); display: flex; justify-content: space-between;">
+                <span>CELYA Player &copy; 2026</span>
+                <span id="expiry-label">Connecting...</span>
+            </div>
+        </div>
+
+        <div class="side-info">
+            <div class="act-status" id="tv-status">Checking...</div>
+            <div class="info-tag">Mac Address</div>
+            <div class="info-val" id="disp-tv-mac">--:--:--:--:--:--</div>
+            <div class="info-tag">Device Key</div>
+            <div class="info-val" id="disp-tv-key">------</div>
+            <div style="font-size: 10px; color: var(--text-dim); margin-top: 15px;">v4.3 Pro Landscape</div>
+        </div>
+    </div>
+
+    <!-- 2. شاشة Hub الأقسام -->
+    <div id="hub-view" class="hub-screen">
+        <h2 id="hub-current-name" style="color: var(--accent-gold);">CELYA PLAYER</h2>
+        <div class="hub-grid">
+            <div class="hub-item" onclick="loadContent('live')">
+                <div style="font-size: 35px; margin-bottom: 8px;">📺</div>
+                <h3>LIVE TV</h3>
+            </div>
+            <div class="hub-item" onclick="loadContent('movie')">
+                <div style="font-size: 35px; margin-bottom: 8px;">🎬</div>
+                <h3>MOVIES</h3>
+            </div>
+            <div class="hub-item" onclick="loadContent('series')">
+                <div style="font-size: 35px; margin-bottom: 8px;">🍿</div>
+                <h3>SERIES</h3>
+            </div>
+        </div>
+        <button onclick="backToPlaylists()" style="margin-top: 25px; width: 140px; padding: 9px; background: transparent; border: 1px solid #fff; color: #fff; border-radius: 6px; cursor: pointer;">رجوع للقوائم</button>
+    </div>
+
+    <!-- 3. شاشة مشغل الفيديو -->
+    <div id="player-view" class="screen-view player-screen">
+        <div class="channels-sidebar">
+            <div style="padding: 12px; border-bottom: 1px solid var(--line-color); display: flex; justify-content: space-between; align-items: center;">
+                <strong id="channel-type-title" style="font-size: 13px;">Channels</strong>
+                <button onclick="backToHub()" style="background: transparent; border: 1px solid var(--text-dim); color: #fff; padding: 3px 6px; border-radius: 4px; cursor: pointer; font-size: 11px;">رجوع</button>
+            </div>
+            <div class="channel-list" id="channels-box"></div>
+        </div>
+        <div class="video-container">
+            <video id="tv-video" controls autoplay></video>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = { databaseURL: "https://celya-player-default-rtdb.firebaseio.com" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentActivePlaylist = null;
+        let hls = null;
+
+        function getDeviceIdentity() {
+            let mac = localStorage.getItem('celya_mac');
+            let key = localStorage.getItem('celya_key');
+            if (!mac || !key) {
+                const hex = "0123456789abcdef";
+                mac = "17:8d:0b:" + 
+                      hex[Math.floor(Math.random()*16)] + hex[Math.floor(Math.random()*16)] + ":" +
+                      hex[Math.floor(Math.random()*16)] + hex[Math.floor(Math.random()*16)] + ":" +
+                      hex[Math.floor(Math.random()*16)] + hex[Math.floor(Math.random()*16)];
+                key = Math.floor(100000 + Math.random() * 900000).toString();
+                localStorage.setItem('celya_mac', mac);
+                localStorage.setItem('celya_key', key);
+            }
+            return { mac, key, macKey: mac.replace(/:/g, '_') };
+        }
+
+        const dev = getDeviceIdentity();
+        document.getElementById('disp-tv-mac').innerText = dev.mac;
+        document.getElementById('disp-tv-key').innerText = dev.key;
+
+        const devRef = db.ref('devices/' + dev.macKey);
+
+        devRef.on('value', (snapshot) => {
+            let data = snapshot.val();
+            if (!data) {
+                const expire = new Date();
+                expire.setDate(expire.getDate() + 7);
+                data = {
+                    mac: dev.mac,
+                    device_key: dev.key,
+                    status: 'trial',
+                    expire_date: expire.toISOString().split('T')[0],
+                    created_at: new Date().toISOString()
+                };
+                devRef.set(data);
+            }
+
+            const today = new Date().toISOString().split('T')[0];
+            if (data.expire_date && data.expire_date < today && data.status !== 'lifetime' && data.status !== 'active') {
+                document.getElementById('expired-screen').style.display = 'flex';
+                return;
+            } else {
+                document.getElementById('expired-screen').style.display = 'none';
+            }
+
+            document.getElementById('tv-status').innerText = data.status === 'lifetime' ? 'Lifetime Activated' : (data.status === 'active' ? 'Active Subscription' : 'Trial Version');
+            document.getElementById('expiry-label').innerText = 'Expires: ' + data.expire_date;
+
+            const plContainer = document.getElementById('tv-playlists-box');
+            plContainer.innerHTML = '';
+
+            if (data.playlists) {
+                Object.values(data.playlists).forEach(pl => {
+                    const card = document.createElement('div');
+                    card.className = 'playlist-card';
+                    card.onclick = () => openHub(pl);
+                    card.innerHTML = `
+                        <div class="card-title">${pl.name || 'CELYA Playlist'}</div>
+                        <div class="card-badge">Connected</div>
+                    `;
+                    plContainer.appendChild(card);
+                });
+            } else {
+                plContainer.innerHTML = `
+                    <div class="playlist-card" style="opacity: 0.7;">
+                        <div class="card-title">No Playlist</div>
+                        <div class="card-badge" style="background: var(--accent-gold); color: #000;">Waiting Portal</div>
+                    </div>
+                `;
+            }
+        });
+
+        function openHub(pl) {
+            currentActivePlaylist = pl;
+            document.getElementById('hub-current-name').innerText = pl.name || 'CELYA PLAYER';
+            document.getElementById('welcome-view').style.display = 'none';
+            document.getElementById('hub-view').style.display = 'flex';
+        }
+
+        function backToPlaylists() {
+            document.getElementById('hub-view').style.display = 'none';
+            document.getElementById('welcome-view').style.display = 'flex';
+        }
+
+        function backToHub() {
+            const video = document.getElementById('tv-video');
+            video.pause();
+            if (hls) hls.destroy();
+            document.getElementById('player-view').style.display = 'none';
+            document.getElementById('hub-view').style.display = 'flex';
+        }
+
+        async function loadContent(type) {
+            document.getElementById('hub-view').style.display = 'none';
+            document.getElementById('player-view').style.display = 'flex';
+            document.getElementById('channel-type-title').innerText = type.toUpperCase();
+
+            const box = document.getElementById('channels-box');
+            box.innerHTML = '<p style="padding: 10px; color: var(--text-dim);">جاري تحميل القنوات...</p>';
+
+            if (!currentActivePlaylist || !currentActivePlaylist.url) {
+                box.innerHTML = '<p style="padding: 10px; color: red;">لا يوجد رابط</p>';
+                return;
+            }
+
+            try {
+                const res = await fetch(currentActivePlaylist.url);
+                const text = await res.text();
+                const lines = text.split(/\r?\n/);
+                const channels = [];
+
+                let currentCh = null;
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line.startsWith('#EXTINF:')) {
+                        const commaIndex = line.indexOf(',');
+                        const name = commaIndex !== -1 ? line.substring(commaIndex + 1).trim() : 'Channel ' + (channels.length + 1);
+                        currentCh = { name };
+                    } else if (line.startsWith('http') && currentCh) {
+                        currentCh.url = line;
+                        channels.push(currentCh);
+                        currentCh = null;
+                        if (channels.length >= 100) break;
+                    }
+                }
+
+                box.innerHTML = '';
+                if (channels.length > 0) {
+                    channels.forEach(ch => {
+                        const item = document.createElement('div');
+                        item.className = 'channel-item';
+                        item.innerText = ch.name;
+                        item.onclick = () => playStream(ch.url, item);
+                        box.appendChild(item);
+                    });
+                    playStream(channels[0].url, box.firstChild);
+                } else {
+                    box.innerHTML = '<p style="padding: 10px; color: var(--text-dim);">لا توجد قنوات.</p>';
+                }
+            } catch (err) {
+                box.innerHTML = '<p style="padding: 10px; color: red;">تعذر الجلب</p>';
+            }
+        }
+
+        function playStream(streamUrl, element) {
+            document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
+            if (element) element.classList.add('active');
+
+            const video = document.getElementById('tv-video');
+            if (Hls.isSupported()) {
+                if (hls) hls.destroy();
+                hls = new Hls();
+                hls.loadSource(streamUrl);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+            } else {
+                video.src = streamUrl;
+                video.play().catch(() => {});
+            }
+        }
+    </script>
+</body>
+</html>
