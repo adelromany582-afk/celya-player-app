@@ -23,7 +23,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; user-select: none; }
         body { background-color: var(--bg-dark); color: var(--text-main); width: 100vw; height: 100vh; overflow: hidden; }
 
-        .screen-view { display: flex; width: 100vw; height: 100vh; }
+        .screen-view { display: flex; width: 100vw; height: 100vh; flex-direction: row-reverse; }
         
         .main-content {
             flex: 0 0 75%;
@@ -42,6 +42,7 @@
             gap: 12px;
             color: var(--accent-gold);
             direction: ltr;
+            justify-content: flex-end;
         }
         .header-logo span { color: var(--text-dim); font-size: 14px; font-weight: normal; }
 
@@ -72,10 +73,10 @@
         .card-title { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
         .card-badge { background: #238636; color: #fff; font-size: 11px; padding: 3px 8px; border-radius: 10px; width: fit-content; }
 
-        /* الشريط الجانبي 25% */
+        /* الشريط الجانبي 25% على اليمين */
         .side-info {
             flex: 0 0 25%;
-            border-right: 1px solid var(--line-color);
+            border-left: 1px solid var(--line-color);
             background: #0b0f17;
             padding: 15px 12px;
             display: flex;
@@ -146,11 +147,11 @@
         .hub-item { background: var(--card-bg); border: 1px solid var(--line-color); border-radius: 14px; height: 210px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s all; }
         .hub-item:hover { border-color: var(--accent-gold); transform: translateY(-4px); }
 
-        /* شاشة المشغل */
-        .player-screen { display: none; width: 100vw; height: 100vh; }
+        /* شاشة المشغل (القائمة على اليمين والفيديو على اليسار) */
+        .player-screen { display: none; width: 100vw; height: 100vh; flex-direction: row-reverse; }
         .channels-sidebar { width: 320px; background: #0c0f17; border-left: 1px solid var(--line-color); display: flex; flex-direction: column; height: 100vh; }
         .channel-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .channel-item { padding: 10px 12px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; background: #161b26; font-size: 12px; display: flex; justify-content: space-between; align-items: center; color: #fff; }
+        .channel-item { padding: 10px 12px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; background: #161b26; font-size: 12px; display: flex; justify-content: space-between; align-items: center; color: #fff; text-align: right; }
         .channel-item:hover, .channel-item.active { background: var(--accent-gold); color: #000; font-weight: bold; }
         .video-container { flex: 1; background: #000; position: relative; display: flex; justify-content: center; align-items: center; height: 100vh; }
         video { width: 100%; height: 100%; object-fit: contain; }
@@ -185,16 +186,16 @@
     <div id="welcome-view" class="screen-view">
         <div class="main-content">
             <div class="header-logo">
-                <strong>CELYA PLAYER</strong> <span>| Playlists</span>
+                <span>Playlists |</span> <strong>CELYA PLAYER</strong>
             </div>
             <div class="playlists-grid" id="tv-playlists-box"></div>
             <div style="font-size: 11px; color: var(--text-dim); display: flex; justify-content: space-between; direction: ltr;">
-                <span>CELYA Player &copy; 2026</span>
                 <span id="expiry-label">Connecting...</span>
+                <span>CELYA Player &copy; 2026</span>
             </div>
         </div>
 
-        <!-- البار الجانبي 25% -->
+        <!-- الشريط الجانبي 25% على اليمين -->
         <div class="side-info">
             <div class="act-status" id="tv-status">Checking...</div>
             
@@ -208,7 +209,7 @@
             <div class="info-val" id="disp-tv-mac">--:--:--:--:--:--</div>
             <div class="info-tag">Device Key</div>
             <div class="info-val" id="disp-tv-key">------</div>
-            <div style="font-size: 9px; color: var(--text-dim); margin-top: 5px;">v5.2 Stable Pro</div>
+            <div style="font-size: 9px; color: var(--text-dim); margin-top: 5px;">v5.3 Right Sidebar</div>
         </div>
     </div>
 
@@ -236,8 +237,8 @@
     <div id="player-view" class="screen-view player-screen">
         <div class="channels-sidebar">
             <div style="padding: 12px; border-bottom: 1px solid var(--line-color); display: flex; justify-content: space-between; align-items: center;">
-                <strong id="channel-type-title" style="font-size: 13px;">Channels</strong>
                 <button onclick="backToHub()" style="background: transparent; border: 1px solid var(--text-dim); color: #fff; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">رجوع</button>
+                <strong id="channel-type-title" style="font-size: 13px;">Channels</strong>
             </div>
             <div class="channel-list" id="channels-box"></div>
         </div>
@@ -365,10 +366,10 @@
             document.getElementById('channel-type-title').innerText = type.toUpperCase();
 
             const box = document.getElementById('channels-box');
-            box.innerHTML = '<p style="padding: 10px; color: var(--text-dim);">جاري تحميل المحتوى...</p>';
+            box.innerHTML = '<p style="padding: 10px; color: var(--text-dim); text-align: center;">جاري جلب المحتوى...</p>';
 
             if (!currentActivePlaylist || !currentActivePlaylist.url) {
-                box.innerHTML = '<p style="padding: 10px; color: red;">لا يوجد رابط مسجل</p>';
+                box.innerHTML = '<p style="padding: 10px; color: red; text-align: center;">لا يوجد رابط مسجل</p>';
                 return;
             }
 
@@ -376,68 +377,36 @@
                 let playlistText = '';
                 const targetUrl = currentActivePlaylist.url.trim();
 
-                // محاولة القراءة المباشرة أولاً ثم عبر عدة مسارات بروكسي لتفادي حظر CORS
                 try {
-                    const res = await fetch(targetUrl);
+                    const res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl));
                     playlistText = await res.text();
                 } catch (e) {
                     try {
-                        const proxyUrl1 = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
-                        const res1 = await fetch(proxyUrl1);
-                        playlistText = await res1.text();
-                    } catch (e2) {
-                        const proxyUrl2 = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
-                        const res2 = await fetch(proxyUrl2);
+                        const res2 = await fetch('https://corsproxy.io/?' + encodeURIComponent(targetUrl));
                         playlistText = await res2.text();
+                    } catch (e2) {
+                        const res3 = await fetch(targetUrl);
+                        playlistText = await res3.text();
                     }
                 }
 
                 const lines = playlistText.split(/\r?\n/);
                 const items = [];
-                let currentItem = null;
+                let currentTitle = "محتوى";
 
                 for (let i = 0; i < lines.length; i++) {
                     const line = lines[i].trim();
                     if (line.startsWith('#EXTINF:')) {
                         const commaIndex = line.indexOf(',');
-                        const name = commaIndex !== -1 ? line.substring(commaIndex + 1).trim() : 'Content ' + (items.length + 1);
-                        
-                        const groupMatch = line.match(/group-title="([^"]+)"/i);
-                        const group = groupMatch ? groupMatch[1].toLowerCase() : '';
-                        
-                        currentItem = { name, group };
-                    } else if ((line.startsWith('http://') || line.startsWith('https://')) && currentItem) {
-                        currentItem.url = line;
-                        const urlLower = line.toLowerCase();
-                        
-                        const isMovie = currentItem.group.includes('movie') || currentItem.group.includes('vod') || currentItem.group.includes('film') || currentItem.group.includes('أفلام') || urlLower.includes('/movie/') || urlLower.endsWith('.mp4') || urlLower.endsWith('.mkv');
-                        const isSeries = currentItem.group.includes('series') || currentItem.group.includes('مسلسلات') || urlLower.includes('/series/');
-                        
-                        if (type === 'movie' && isMovie) {
-                            items.push(currentItem);
-                        } else if (type === 'series' && isSeries) {
-                            items.push(currentItem);
-                        } else if (type === 'live' && !isMovie && !isSeries) {
-                            items.push(currentItem);
+                        if (commaIndex !== -1) {
+                            currentTitle = line.substring(commaIndex + 1).trim();
                         }
-
-                        currentItem = null;
-                    }
-                }
-
-                // إذا لم يتم تصنيف الملف أو كان الرابط M3U بدون مجموعات
-                if (items.length === 0) {
-                    let fallbackTitle = "محتوى";
-                    for (let i = 0; i < lines.length; i++) {
-                        const line = lines[i].trim();
-                        if (line.startsWith('#EXTINF:')) {
-                            const cIndex = line.indexOf(',');
-                            if (cIndex !== -1) fallbackTitle = line.substring(cIndex + 1).trim();
-                        } else if (line.startsWith('http://') || line.startsWith('https://')) {
-                            items.push({ name: fallbackTitle, url: line });
-                            fallbackTitle = "عنصر " + (items.length + 1);
-                            if (items.length >= 100) break;
-                        }
+                    } else if ((line.startsWith('http://') || line.startsWith('https://')) && !line.includes('#')) {
+                        items.push({
+                            name: currentTitle,
+                            url: line
+                        });
+                        currentTitle = "قناة / فيلم " + (items.length + 1);
                     }
                 }
 
@@ -452,11 +421,11 @@
                     });
                     playStream(items[0].url, box.firstChild);
                 } else {
-                    box.innerHTML = '<p style="padding: 10px; color: var(--text-dim);">لا يوجد محتوى في هذا القسم أو الرابط غير صالح.</p>';
+                    box.innerHTML = '<p style="padding: 10px; color: var(--text-dim); text-align: center;">لم يتم العثور على روابط في هذا الرابط.</p>';
                 }
 
             } catch (err) {
-                box.innerHTML = '<p style="padding: 10px; color: red;">تعذر الاتصال بالخادم لجلب القنوات.</p>';
+                box.innerHTML = '<p style="padding: 10px; color: red; text-align: center;">تعذر جلب البيانات. تحقق من الرابط.</p>';
             }
         }
 
