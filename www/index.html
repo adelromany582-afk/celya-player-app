@@ -25,7 +25,6 @@
 
         .screen-view { display: flex; width: 100vw; height: 100vh; flex-direction: row; }
         
-        /* 1. المحتوى الرئيسي على اليسار 75% */
         .main-content {
             flex: 0 0 75%;
             padding: 25px 35px;
@@ -72,7 +71,7 @@
         .card-title { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
         .card-badge { background: #238636; color: #fff; font-size: 11px; padding: 3px 10px; border-radius: 12px; width: fit-content; }
 
-        /* 2. الشريط الجانبي على اليمين 25% */
+        /* الشريط الجانبي على اليمين 25% */
         .side-info {
             flex: 0 0 25%;
             border-left: 1px solid var(--line-color);
@@ -193,7 +192,7 @@
             </div>
         </div>
 
-        <!-- البار الجانبي على اليمين 25% -->
+        <!-- الشريط الجانبي على اليمين 25% -->
         <div class="side-info">
             <div class="act-status" id="tv-status">Checking...</div>
             
@@ -207,11 +206,11 @@
             <div class="info-val" id="disp-tv-mac">--:--:--:--:--:--</div>
             <div class="info-tag">Device Key</div>
             <div class="info-val" id="disp-tv-key">------</div>
-            <div style="font-size: 10px; color: var(--text-dim); margin-top: 10px;">v6.0 Pro English</div>
+            <div style="font-size: 10px; color: var(--text-dim); margin-top: 10px;">v6.2 Pro Final</div>
         </div>
     </div>
 
-    <!-- 2. شاشة الـ Hub بالترتيب المطلوب -->
+    <!-- 2. شاشة الـ Hub -->
     <div id="hub-view" class="hub-screen">
         <h2 id="hub-current-name" style="color: var(--accent-gold); margin-bottom: 10px;">CELYA PLAYER</h2>
         <div class="hub-grid">
@@ -359,7 +358,6 @@
         }
 
         async function fetchM3UContent(url) {
-            // محاولة جلب مباشرة ثم عبر بروكسيات متعددة
             const endpoints = [
                 url,
                 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
@@ -369,10 +367,10 @@
 
             for (let ep of endpoints) {
                 try {
-                    const res = await fetch(ep);
+                    const res = await fetch(ep, { redirect: 'follow' });
                     if (res.ok) {
                         const txt = await res.text();
-                        if (txt && (txt.includes('#EXTM3U') || txt.includes('http'))) {
+                        if (txt && (txt.includes('#EXTM3U') || txt.includes('http') || txt.includes('inf'))) {
                             return txt;
                         }
                     }
@@ -390,7 +388,7 @@
             box.innerHTML = '<p style="padding: 15px; color: var(--text-dim); text-align: center;">Loading channels...</p>';
 
             if (!currentActivePlaylist || !currentActivePlaylist.url) {
-                box.innerHTML = '<p style="padding: 15px; color: red; text-align: center;">No URL found</p>';
+                box.innerHTML = '<p style="padding: 15px; color: red; text-align: center;">No URL found in playlist</p>';
                 return;
             }
 
@@ -421,7 +419,7 @@
                         const group = groupMatch ? groupMatch[1].toLowerCase() : '';
                         
                         currentItem = { name, group };
-                    } else if ((line.startsWith('http://') || line.startsWith('https://')) && currentItem) {
+                    } else if ((line.startsWith('http://') || line.startsWith('https://') || line.startsWith('rtmp://')) && currentItem) {
                         currentItem.url = line;
                         const urlLower = line.toLowerCase();
                         
@@ -441,6 +439,20 @@
                     }
                 }
 
+                if (allItems.length === 0) {
+                    let fallbackTitle = "Channel ";
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (line.startsWith('#EXTINF:')) {
+                            const cIndex = line.indexOf(',');
+                            if (cIndex !== -1) fallbackTitle = line.substring(cIndex + 1).trim();
+                        } else if (line.startsWith('http://') || line.startsWith('https://')) {
+                            allItems.push({ name: fallbackTitle + (allItems.length + 1), url: line });
+                            if (allItems.length >= 1000) break;
+                        }
+                    }
+                }
+
                 let displayItems = [];
                 if (type === 'live') displayItems = liveItems.length > 0 ? liveItems : allItems;
                 else if (type === 'movie') displayItems = movieItems.length > 0 ? movieItems : allItems;
@@ -457,11 +469,11 @@
                     });
                     playStream(displayItems[0].url, box.firstChild);
                 } else {
-                    box.innerHTML = '<p style="padding: 15px; color: var(--text-dim); text-align: center;">No items found in this section.</p>';
+                    box.innerHTML = '<p style="padding: 15px; color: var(--text-dim); text-align: center;">No items found in this category.</p>';
                 }
 
             } catch (err) {
-                box.innerHTML = '<p style="padding: 15px; color: red; text-align: center;">Error fetching data.</p>';
+                box.innerHTML = '<p style="padding: 15px; color: red; text-align: center;">Error processing playlist data.</p>';
             }
         }
 
